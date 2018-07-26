@@ -1,0 +1,6 @@
+[package]
+name = "letter-pair"
+version = "0.1.0"
+authors = ["ossi"]
+
+[dependencies]
