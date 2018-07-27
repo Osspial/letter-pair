@@ -1,3 +1,4 @@
+#![feature(nll)]
 use std::fs::File;
 use std::io::Read;
 use std::collections::{HashMap, HashSet};
@@ -26,11 +27,20 @@ fn main() {
         let first_char = word.chars().next().unwrap();
         *first_letter.entry(first_char).or_insert(0.) += 1.0 / (wn + 1) as f64;
     }
-    let mut lp_sorted = letter_pairs.iter().collect::<Vec<_>>();
-    lp_sorted.sort_by_key(|lp| (&(lp.0).0, (lp.1 * 100000.) as u64));
+    for c in 'a' as u8..='z' as u8 {
+        for h in 'a' as u8..='z' as u8 {
+            let (c, h) = (c as char, h as char);
+            if c != h && !letter_pairs.get(&(c, h)).is_some() {
+                letter_pairs.insert((c, h), 0.);
+            }
+        }
+    }
+
+    let mut lp_sorted_grouped = letter_pairs.iter().collect::<Vec<_>>();
+    lp_sorted_grouped.sort_by_key(|lp| (&(lp.0).0, (lp.1 * 100000.) as u64));
     let mut lp_grouped = Vec::new();
     let mut last_char = ' ';
-    for &(lp, count) in &lp_sorted {
+    for &(lp, count) in &lp_sorted_grouped {
         if lp.0 != last_char {
             lp_grouped.push(vec![(lp, count)]);
         } else {
@@ -41,7 +51,14 @@ fn main() {
     let letter_ranks = "etaoinshrdlcumwfgypbvkjxqz";
     lp_grouped.sort_by_key(|lp_vec| 26 - letter_ranks.find((lp_vec[0].0).0).unwrap());
 
+    let mut lp_sorted = letter_pairs.iter().collect::<Vec<_>>();
+    lp_sorted.sort_by_key(|lp|(lp.1 * 100000.) as u64);
+    for (lp, count) in &lp_sorted {
+        println!("{}{} {:.4}", lp.0, lp.1, count);
+    }
+
     // List view
+    /*
     for v in &lp_grouped {
         for (lp, count) in v {
             println!("{}{} {:.4}", lp.0, lp.1, count);
@@ -50,9 +67,54 @@ fn main() {
     } // */
 
     let mut used_characters: HashSet<char> = HashSet::new();
-    let mut wheels = vec![String::new()];
+    let mut unused_characters = HashSet::new();
+    for c in ('a' as u8..='z' as u8).map(|c| c as char) {
+        unused_characters.insert(c);
+    }
+    let mut wheels = vec![String::new(); 4];
     let wheel_max_len = 8;
 
+    let mut whi = 0;
+    while unused_characters.len() > 0 {
+        let wheel = &mut wheels[whi];
+        macro_rules! insert_char {
+            ($c:expr) => {{
+                let c = $c;
+                wheel.push(c);
+                used_characters.insert(c);
+                unused_characters.remove(&c);
+            }}
+        }
+
+        if wheel.len() == 0 {
+            insert_char!(lp_sorted.iter().rev().find(|(lp, _)| !used_characters.contains(&lp.0)).map(|(lp, _)| lp.0).unwrap());
+        } else {
+            let mut char_ranks = HashMap::new();
+            for c in &unused_characters {
+                let mut rank = 0.0;
+                for wc in wheel.chars() {
+                    rank += letter_pairs.get(&(*c, wc)).unwrap();
+                    rank += letter_pairs.get(&(wc, *c)).unwrap();
+                }
+                char_ranks.insert(*c, rank);
+            }
+
+            let mut lowest_char = ' ';
+            let mut lc_rank = 1.0/0.0;
+            for (c, rank) in char_ranks {
+                if rank < lc_rank {
+                    lowest_char = c;
+                    lc_rank = rank;
+                }
+            }
+            assert_ne!(lowest_char, ' ');
+            insert_char!(lowest_char);
+        }
+        whi += 1;
+        whi %= wheels.len();
+    }
+
+    /* 
     for v in lp_grouped.into_iter().rev() {
         let lead_char = (v[0].0).0;
         macro_rules! active_wheel {
@@ -80,7 +142,7 @@ fn main() {
                 used_characters.insert(c);
             }
         }
-    }
+    } // */
 
     let mut fl_sorted = first_letter.into_iter().collect::<Vec<_>>();
     fl_sorted.sort_by_key(|f| (-f.1 * 10000.) as i64);
@@ -92,4 +154,5 @@ fn main() {
     for w in wheels {
         println!("{}", w);
     }
+    // */
 }
