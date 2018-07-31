@@ -58,7 +58,6 @@ fn main() {
     }
 
     // List view
-    /*
     for v in &lp_grouped {
         for (lp, count) in v {
             println!("{}{} {:.4}", lp.0, lp.1, count);
@@ -98,6 +97,15 @@ fn main() {
                 }
                 char_ranks.insert(*c, rank);
             }
+            {
+                print!("{}\n  " , wheel);
+                let mut cr_sorted = char_ranks.iter().collect::<Vec<_>>();
+                cr_sorted.sort_by_key(|&(_, r)| (r * 10000.) as u64);
+                for (c, _) in cr_sorted {
+                    print!("{}", c);
+                }
+                println!();
+            }
 
             let mut lowest_char = ' ';
             let mut lc_rank = 1.0/0.0;
@@ -112,6 +120,9 @@ fn main() {
         }
         whi += 1;
         whi %= wheels.len();
+        if whi == 0 {
+            println!();
+        }
     }
 
     /* 
